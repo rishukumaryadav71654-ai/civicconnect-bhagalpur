@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CivicConnect Bhagalpur V7</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div class="brand"><b>C</b><strong>CivicConnect<small>Bhagalpur</small></strong></div>
+<nav><a href="#home">होम</a><a href="#complaint">शिकायत दर्ज करें</a><a href="#track">ट्रैक करें</a><a href="#admin">Admin</a></nav></header>
+
+<section id="home" class="hero"><div><span>BHAGALPUR CIVIC SERVICES</span>
+<h1>आपकी समस्या,<br><em>हमारी प्राथमिकता।</em></h1>
+<p>नागरिक समस्या दर्ज करें और उसकी स्थिति ऑनलाइन देखें। अब complaints central server पर save होंगी।</p>
+<a class="btn" href="#complaint">शिकायत दर्ज करें</a><a class="btn alt" href="#track">ट्रैक करें</a></div>
+<aside><small>ONLINE SERVICE</small><strong>24/7</strong><p>Central complaint tracking</p></aside></section>
+
+<section class="stats"><div><b>LIVE</b>Central database</div><div><b>24/7</b>Tracking</div><div><b>ADMIN</b>Status updates</div><div><b>ONLINE</b>Multi-device</div></section>
+
+<section id="complaint" class="section"><div class="title"><span>REPORT AN ISSUE</span><h2>शिकायत दर्ज करें</h2></div>
+<form id="form" class="card" novalidate>
+<div class="grid">
+<label>नाम<input id="name" placeholder="अपना नाम" required><i id="nameE"></i></label>
+<label>मोबाइल नंबर<input id="mobile" maxlength="10" inputmode="numeric" placeholder="10 अंकों का मोबाइल नंबर" required><small>केवल 10 अंक</small><i id="mobileE"></i></label>
+<label>श्रेणी<select id="category" required><option value="">श्रेणी चुनें</option><option>सड़क</option><option>नाली / जल निकासी</option><option>कचरा</option><option>स्ट्रीट लाइट</option><option>पानी</option><option>अन्य</option></select><i id="categoryE"></i></label>
+<label>वार्ड / क्षेत्र<input id="area" placeholder="जैसे: तिलकामांझी" required><i id="areaE"></i></label>
+</div>
+<label>समस्या का विवरण<textarea id="description" minlength="10" placeholder="समस्या को विस्तार से लिखें..." required></textarea><i id="descriptionE"></i></label>
+<button class="btn full">शिकायत सबमिट करें</button><div id="success"></div></form></section>
+
+<section id="track" class="section track"><div class="title"><span>TRACK COMPLAINT</span><h2>शिकायत ट्रैक करें</h2><p>Complaint ID डालकर server से वर्तमान स्थिति देखें।</p></div>
+<div class="card"><div class="trackbox"><input id="trackId" placeholder="BHP-2026-00001"><button class="btn" onclick="track()">स्थिति देखें</button></div><div id="result"></div></div></section>
+
+<section id="admin" class="section admin"><div class="title"><span>ADMIN DASHBOARD</span><h2>शिकायत प्रबंधन</h2><p>Server पर saved complaints देखें और status बदलें।</p></div>
+<div class="card">
+<div id="adminLogin"><label>Admin PIN<input id="adminPin" type="password" maxlength="20" placeholder="Admin PIN"></label><button class="btn" onclick="adminLogin()">Admin Login</button><div id="adminMsg"></div></div>
+<div id="adminPanel" class="hidden"><div class="toolbar"><b id="count">0 complaints</b><div><button class="btn alt" onclick="renderAdmin()">Refresh</button><button class="btn logout" onclick="adminLogout()">Logout</button></div></div><div id="adminList"></div></div>
+</div></section>
+<footer>CivicConnect Bhagalpur · Report • Track • Resolve</footer>
+<script src="script.js"></script>
+</body></html>
