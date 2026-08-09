@@ -2,6 +2,12 @@
   "name": "civicconnect-bhagalpur-v7",
   "version": "1.0.0",
   "private": true,
-  "scripts": {"start": "node server.js"},
-  "dependencies": {"express": "^4.21.2"}
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.2",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.2"
+  }
 }

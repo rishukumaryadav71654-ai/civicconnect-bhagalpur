@@ -15,7 +15,7 @@ V7 moves complaint data from browser localStorage to a server-side JSON database
    http://localhost:3000
 
 Admin PIN for local testing:
-123456
+Admin PIN is configured through environment variables.
 
 ## Test multi-device behavior
 
@@ -29,7 +29,7 @@ The second device must be able to reach the PC through the network/firewall.
 
 ## Important
 
-This V7 is a real server/database architecture, but the database is a local JSON file and the admin PIN defaults to 123456. It is suitable for learning/testing, NOT production.
+
 
 For a public website, deploy the server to a hosting service, use a real database (PostgreSQL/Supabase/etc.), HTTPS, secure password hashing, proper authentication, rate limiting, validation and backups.
 

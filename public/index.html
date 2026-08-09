@@ -1,40 +1,1051 @@
-<!doctype html>
+```html
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CivicConnect Bhagalpur V7</title><link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CivicConnect Banka</title>
+
+    <!-- Leaflet -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <!-- Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-<header><div class="brand"><b>C</b><strong>CivicConnect<small>Bhagalpur</small></strong></div>
-<nav><a href="#home">होम</a><a href="#complaint">शिकायत दर्ज करें</a><a href="#track">ट्रैक करें</a><a href="#admin">Admin</a></nav></header>
 
-<section id="home" class="hero"><div><span>BHAGALPUR CIVIC SERVICES</span>
-<h1>आपकी समस्या,<br><em>हमारी प्राथमिकता।</em></h1>
-<p>नागरिक समस्या दर्ज करें और उसकी स्थिति ऑनलाइन देखें। अब complaints central server पर save होंगी।</p>
-<a class="btn" href="#complaint">शिकायत दर्ज करें</a><a class="btn alt" href="#track">ट्रैक करें</a></div>
-<aside><small>ONLINE SERVICE</small><strong>24/7</strong><p>Central complaint tracking</p></aside></section>
+<!-- =========================
+     NAVBAR
+========================= -->
 
-<section class="stats"><div><b>LIVE</b>Central database</div><div><b>24/7</b>Tracking</div><div><b>ADMIN</b>Status updates</div><div><b>ONLINE</b>Multi-device</div></section>
+<header class="topbar">
 
-<section id="complaint" class="section"><div class="title"><span>REPORT AN ISSUE</span><h2>शिकायत दर्ज करें</h2></div>
-<form id="form" class="card" novalidate>
-<div class="grid">
-<label>नाम<input id="name" placeholder="अपना नाम" required><i id="nameE"></i></label>
-<label>मोबाइल नंबर<input id="mobile" maxlength="10" inputmode="numeric" placeholder="10 अंकों का मोबाइल नंबर" required><small>केवल 10 अंक</small><i id="mobileE"></i></label>
-<label>श्रेणी<select id="category" required><option value="">श्रेणी चुनें</option><option>सड़क</option><option>नाली / जल निकासी</option><option>कचरा</option><option>स्ट्रीट लाइट</option><option>पानी</option><option>अन्य</option></select><i id="categoryE"></i></label>
-<label>वार्ड / क्षेत्र<input id="area" placeholder="जैसे: तिलकामांझी" required><i id="areaE"></i></label>
+    <div class="topbar-inner">
+
+        <a href="#home" class="brand">
+
+            <div class="brand-mark">
+    <img src="logo.png" alt="CivicConnect Banka Logo">
 </div>
-<label>समस्या का विवरण<textarea id="description" minlength="10" placeholder="समस्या को विस्तार से लिखें..." required></textarea><i id="descriptionE"></i></label>
-<button class="btn full">शिकायत सबमिट करें</button><div id="success"></div></form></section>
 
-<section id="track" class="section track"><div class="title"><span>TRACK COMPLAINT</span><h2>शिकायत ट्रैक करें</h2><p>Complaint ID डालकर server से वर्तमान स्थिति देखें।</p></div>
-<div class="card"><div class="trackbox"><input id="trackId" placeholder="BHP-2026-00001"><button class="btn" onclick="track()">स्थिति देखें</button></div><div id="result"></div></div></section>
+           
 
-<section id="admin" class="section admin"><div class="title"><span>ADMIN DASHBOARD</span><h2>शिकायत प्रबंधन</h2><p>Server पर saved complaints देखें और status बदलें।</p></div>
-<div class="card">
-<div id="adminLogin"><label>Admin PIN<input id="adminPin" type="password" maxlength="20" placeholder="Admin PIN"></label><button class="btn" onclick="adminLogin()">Admin Login</button><div id="adminMsg"></div></div>
-<div id="adminPanel" class="hidden"><div class="toolbar"><b id="count">0 complaints</b><div><button class="btn alt" onclick="renderAdmin()">Refresh</button><button class="btn logout" onclick="adminLogout()">Logout</button></div></div><div id="adminList"></div></div>
-</div></section>
-<footer>CivicConnect Bhagalpur · Report • Track • Resolve</footer>
+        </a>
+
+
+        <nav class="main-nav">
+
+            <a href="#home">शहर</a>
+
+            <a href="#report">शिकायत दर्ज करें</a>
+
+            <a href="#track">ट्रैक करें</a>
+
+            <a href="#schemes">योजनाएं</a>
+
+        </nav>
+
+
+        <button
+            class="nav-action"
+            onclick="document.getElementById('report').scrollIntoView({behavior:'smooth'})"
+        >
+            <i class="fa-solid fa-plus"></i>
+            शिकायत दर्ज करें
+        </button>
+
+    </div>
+
+</header>
+
+
+
+<!-- =========================
+     HERO
+========================= -->
+
+<section id="home" class="banka-hero">
+
+    <div class="hero-pattern"></div>
+
+    <div class="hero-inner">
+
+        <div class="hero-copy">
+
+            <div class="city-label">
+                BANKA • BIHAR
+            </div>
+
+            <h1>
+                आपका शहर,
+                <br>
+                <span>आपकी पहचान।</span>
+            </h1>
+
+            <p>
+                आपकी भागीदारी से Banka बेहतर बनता है।
+                शिकायत दर्ज करें, सुझाव दें और अपने
+                शहर के विकास से जुड़े रहें।
+            </p>
+
+
+            <div class="hero-actions">
+
+                <button
+                    class="hero-primary"
+                    onclick="document.getElementById('report').scrollIntoView({behavior:'smooth'})"
+                >
+                    <i class="fa-solid fa-camera"></i>
+                    शिकायत दर्ज करें
+                </button>
+
+
+                <button
+                    class="hero-secondary"
+                    onclick="document.getElementById('track').scrollIntoView({behavior:'smooth'})"
+                >
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                    शिकायत ट्रैक करें
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div class="hero-visual">
+
+            <div class="hero-city-card">
+
+                <div class="city-card-top">
+                    <span>MY CITY</span>
+
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+
+                <div class="city-name">
+                    BANKA
+                </div>
+
+                <div class="city-subtitle">
+                    Bihar, India
+                </div>
+
+
+                <div class="city-mini-stats">
+
+                    <div>
+                        <strong>GPS</strong>
+                        <span>Location</span>
+                    </div>
+
+                    <div>
+                        <strong>24×7</strong>
+                        <span>Reporting</span>
+                    </div>
+
+                    <div>
+                        <strong>LIVE</strong>
+                        <span>Tracking</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     QUICK ACTIONS
+========================= -->
+
+<section class="quick-section">
+
+    <div class="quick-grid">
+
+
+        <button
+            class="quick-card complaint-action"
+            onclick="document.getElementById('report').scrollIntoView({behavior:'smooth'})"
+        >
+
+            <div class="quick-icon">
+                <i class="fa-solid fa-camera"></i>
+            </div>
+
+            <div>
+                <h3>शिकायत दर्ज करें</h3>
+
+                <p>
+                    फोटो + GPS · सही विभाग तक पहुंचे
+                </p>
+            </div>
+
+            <i class="fa-solid fa-arrow-right quick-arrow"></i>
+
+        </button>
+
+
+
+        <button
+            class="quick-card suggestion-action"
+            onclick="document.getElementById('report').scrollIntoView({behavior:'smooth'})"
+        >
+
+            <div class="quick-icon">
+                <i class="fa-regular fa-lightbulb"></i>
+            </div>
+
+            <div>
+                <h3>सुझाव दें</h3>
+
+                <p>
+                    आपकी राय से Banka बेहतर बने
+                </p>
+            </div>
+
+            <i class="fa-solid fa-arrow-right quick-arrow"></i>
+
+        </button>
+
+
+
+        <button
+            class="quick-card track-action"
+            onclick="document.getElementById('track').scrollIntoView({behavior:'smooth'})"
+        >
+
+            <div class="quick-icon">
+                <i class="fa-solid fa-magnifying-glass-location"></i>
+            </div>
+
+            <div>
+                <h3>शिकायत ट्रैक करें</h3>
+
+                <p>
+                    अपनी शिकायत का हाल जानें
+                </p>
+            </div>
+
+            <i class="fa-solid fa-arrow-right quick-arrow"></i>
+
+        </button>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     CITY INTRO
+========================= -->
+
+<section class="city-intro">
+
+    <div class="content-width">
+
+        <div class="section-tag">
+            हमारा शहर
+        </div>
+
+        <h2>
+            Banka की पहचान
+        </h2>
+
+        <p class="intro-text">
+            इतिहास, संस्कृति, प्रकृति और आगे बढ़ता हुआ
+            एक जीवंत शहर। Banka को बेहतर बनाने में
+            हर नागरिक की भूमिका है।
+        </p>
+
+
+        <div class="identity-grid">
+
+            <div class="identity-card identity-large">
+
+                <div class="identity-placeholder">
+                    <i class="fa-solid fa-mountain-sun"></i>
+                    <span>Banka</span>
+                </div>
+
+                <div class="identity-caption">
+                    <strong>बांका</strong>
+                    <span>हमारी पहचान</span>
+                </div>
+
+            </div>
+
+
+            <div class="identity-card">
+
+                <div class="identity-icon green">
+                    <i class="fa-solid fa-tree"></i>
+                </div>
+
+                <h3>प्रकृति</h3>
+
+                <p>
+                    प्रकृति और हरियाली से जुड़ा हमारा क्षेत्र।
+                </p>
+
+            </div>
+
+
+            <div class="identity-card">
+
+                <div class="identity-icon orange">
+                    <i class="fa-solid fa-landmark"></i>
+                </div>
+
+                <h3>विरासत</h3>
+
+                <p>
+                    इतिहास और स्थानीय संस्कृति की समृद्ध पहचान।
+                </p>
+
+            </div>
+
+
+            <div class="identity-card">
+
+                <div class="identity-icon blue">
+                    <i class="fa-solid fa-people-group"></i>
+                </div>
+
+                <h3>हमारे लोग</h3>
+
+                <p>
+                    नागरिकों की भागीदारी से मजबूत होता Banka।
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     REPORT AREA
+========================= -->
+
+<section id="report" class="report-area">
+
+    <div class="content-width">
+
+        <div class="section-heading-left">
+
+            <div class="section-tag">
+                नागरिक सेवा
+            </div>
+
+            <h2>
+                अपने शहर के लिए आवाज़ उठाएं
+            </h2>
+
+            <p>
+                समस्या की जानकारी दें और सही location
+                के साथ उसे दर्ज करें।
+            </p>
+
+        </div>
+
+
+        <div class="report-layout">
+
+
+            <!-- FORM -->
+
+            <div class="service-panel">
+
+                <div class="panel-heading">
+
+                    <div class="panel-icon">
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                    </div>
+
+                    <div>
+                        <h3>शिकायत विवरण</h3>
+
+                        <p>
+                            जरूरी जानकारी भरें
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <form id="complaintForm">
+
+
+                    <div class="form-row">
+
+                        <div class="form-group">
+
+                            <label>
+                                आपका नाम
+                            </label>
+
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                placeholder="अपना नाम लिखें"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                मोबाइल नंबर
+                            </label>
+
+                            <input
+                                type="tel"
+                                id="mobile"
+                                name="mobile"
+                                placeholder="10 digit mobile number"
+                                required
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label>
+                            समस्या की श्रेणी
+                        </label>
+
+                        <select
+                            id="category"
+                            name="category"
+                            required
+                        >
+
+                            <option value="">
+                                समस्या चुनें
+                            </option>
+
+                            <option value="Road">
+                                सड़क / गड्ढा
+                            </option>
+
+                            <option value="Street Light">
+                                स्ट्रीट लाइट
+                            </option>
+
+                            <option value="Water">
+                                पानी
+                            </option>
+
+                            <option value="Garbage">
+                                कचरा
+                            </option>
+
+                            <option value="Drainage">
+                                नाली / जल निकासी
+                            </option>
+
+                            <option value="Electricity">
+                                बिजली
+                            </option>
+
+                            <option value="Public Safety">
+                                सार्वजनिक सुरक्षा
+                            </option>
+
+                            <option value="Other">
+                                अन्य
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label>
+                            समस्या का विवरण
+                        </label>
+
+                        <textarea
+                            id="description"
+                            name="description"
+                            rows="5"
+                            placeholder="समस्या के बारे में बताएं..."
+                            required
+                        ></textarea>
+                        <small>
+                            कम से कम 10 characters लिखें
+                        </small>
+
+                    </div>
+
+
+                    <div class="form-note">
+
+                        <i class="fa-solid fa-shield-halved"></i>
+
+                        आपकी जानकारी केवल शिकायत
+                        समाधान के लिए उपयोग की जाएगी।
+
+                    </div>
+                    
+
+
+                    <button
+                        type="submit"
+                        id="submitComplaintBtn"
+                        class="submit-complaint"
+                    >
+
+                        <i class="fa-solid fa-paper-plane"></i>
+
+                        शिकायत जमा करें
+
+                    </button>
+
+
+                </form>
+
+
+                <div id="complaintMessage"></div>
+
+            </div>
+
+
+
+            <!-- MAP -->
+
+            <div class="service-panel location-panel">
+
+                <div class="panel-heading">
+
+                    <div class="panel-icon location">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+
+                    <div>
+                        <h3>स्थान चुनें</h3>
+
+                        <p>
+                            समस्या की सही जगह बताएं
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div class="location-search">
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <input
+                        type="text"
+                        id="locationSearch"
+                        placeholder="स्थान या landmark खोजें..."
+                    >
+
+                    <button
+                        type="button"
+                        id="searchLocationBtn"
+                    >
+                        खोजें
+                    </button>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    id="currentLocationBtn"
+                    class="current-location"
+                >
+
+                    <i class="fa-solid fa-crosshairs"></i>
+
+                    मेरी वर्तमान location
+
+                </button>
+
+
+                <div id="map" class="map"></div>
+
+
+                <div
+                    id="locationStatus"
+                    class="map-status"
+                >
+
+                    <i class="fa-solid fa-hand-pointer"></i>
+
+                    Map पर click करें या marker को drag करें।
+
+                </div>
+
+
+                <div class="coordinate-row">
+
+                    <div>
+                        <span>LATITUDE</span>
+                        <strong id="latitudeDisplay">--</strong>
+                    </div>
+
+                    <div>
+                        <span>LONGITUDE</span>
+                        <strong id="longitudeDisplay">--</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="form-group address-field">
+
+                    <label>
+                        पता / स्थान
+                    </label>
+
+                    <input
+                        type="text"
+                        id="address"
+                        name="address"
+                        placeholder="Location address"
+                    >
+
+                </div>
+
+
+                <input
+                    type="hidden"
+                    id="latitude"
+                    name="latitude"
+                >
+
+                <input
+                    type="hidden"
+                    id="longitude"
+                    name="longitude"
+                >
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     TRACK
+========================= -->
+
+<section id="track" class="track-area">
+
+    <div class="content-width">
+
+        <div class="track-box">
+
+            <div class="track-symbol">
+                <i class="fa-solid fa-location-dot"></i>
+            </div>
+
+
+            <div class="track-content">
+
+                <div class="section-tag">
+                    शिकायत ट्रैक करें
+                </div>
+
+                <h2>
+                    आपकी शिकायत कहां तक पहुंची?
+                </h2>
+
+                <p>
+                    Complaint ID डालकर अपनी शिकायत
+                    का वर्तमान status देखें।
+                </p>
+
+
+                <form id="trackingForm">
+
+                    <div class="track-input">
+
+                        <i class="fa-solid fa-hashtag"></i>
+
+                        <input
+                            type="text"
+                            id="trackingId"
+                            placeholder="Complaint ID"
+                            required
+                        >
+
+                        <button type="submit">
+                            ट्रैक करें
+                        </button>
+
+                    </div>
+
+                </form>
+
+
+                <div id="trackingResult"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     EVENTS
+========================= -->
+
+<section class="events-section">
+
+    <div class="content-width">
+
+        <div class="section-heading-left">
+
+            <div class="section-tag">
+                Banka में
+            </div>
+
+            <h2>
+                क्या हो रहा है
+            </h2>
+
+            <p>
+                शहर से जुड़े कार्यक्रम और नागरिक गतिविधियां।
+            </p>
+
+        </div>
+
+
+        <div class="events-grid">
+
+
+            <article class="event-card">
+
+                <div class="event-date">
+                    <strong>01</strong>
+                    <span>JAN</span>
+                </div>
+
+                <div>
+                    <h3>स्वच्छता अभियान</h3>
+
+                    <p>
+                        अपने आसपास स्वच्छता बनाए रखने
+                        के लिए नागरिक अभियान।
+                    </p>
+
+                    <small>
+                        <i class="fa-solid fa-location-dot"></i>
+                        Banka
+                    </small>
+                </div>
+
+            </article>
+
+
+            <article class="event-card">
+
+                <div class="event-date green-date">
+                    <strong>15</strong>
+                    <span>JAN</span>
+                </div>
+
+                <div>
+                    <h3>वृक्षारोपण अभियान</h3>
+
+                    <p>
+                        हरित Banka के लिए सामूहिक पहल।
+                    </p>
+
+                    <small>
+                        <i class="fa-solid fa-location-dot"></i>
+                        Banka
+                    </small>
+                </div>
+
+            </article>
+
+
+            <article class="event-card">
+
+                <div class="event-date orange-date">
+                    <strong>26</strong>
+                    <span>JAN</span>
+                </div>
+
+                <div>
+                    <h3>नागरिक जागरूकता कार्यक्रम</h3>
+
+                    <p>
+                        नागरिक सेवाओं और डिजिटल सुविधा
+                        की जानकारी।
+                    </p>
+
+                    <small>
+                        <i class="fa-solid fa-location-dot"></i>
+                        Banka
+                    </small>
+                </div>
+
+            </article>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     SCHEMES
+========================= -->
+
+<section id="schemes" class="schemes-section">
+
+    <div class="content-width">
+
+        <div class="section-heading-left">
+
+            <div class="section-tag">
+                सरकारी योजनाएं
+            </div>
+
+            <h2>
+                आपके लिए उपलब्ध योजनाएं
+            </h2>
+
+            <p>
+                केंद्र और राज्य सरकार की प्रमुख योजनाओं
+                की जानकारी।
+            </p>
+
+        </div>
+
+
+        <div class="scheme-grid">
+
+
+            <div class="scheme-card">
+
+                <div class="scheme-icon blue">
+                    <i class="fa-solid fa-house"></i>
+                </div>
+
+                <h3>PM Awas Yojana</h3>
+
+                <p>
+                    पात्र परिवारों के लिए आवास सहायता।
+                </p>
+
+                <span>आवास</span>
+
+            </div>
+
+
+            <div class="scheme-card">
+
+                <div class="scheme-icon green">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+
+                <h3>Ayushman Bharat</h3>
+
+                <p>
+                    पात्र परिवारों के लिए स्वास्थ्य सुरक्षा।
+                </p>
+
+                <span>स्वास्थ्य</span>
+
+            </div>
+
+
+            <div class="scheme-card">
+
+                <div class="scheme-icon orange">
+                    <i class="fa-solid fa-droplet"></i>
+                </div>
+
+                <h3>Har Ghar Jal</h3>
+
+                <p>
+                    हर घर तक सुरक्षित पेयजल पहुंचाने की पहल।
+                </p>
+
+                <span>पानी</span>
+
+            </div>
+
+
+            <div class="scheme-card">
+
+                <div class="scheme-icon purple">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+
+                <h3>Skill India</h3>
+
+                <p>
+                    युवाओं के लिए कौशल और प्रशिक्षण।
+                </p>
+
+                <span>कौशल</span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     ADMIN
+========================= -->
+
+<section id="admin" class="admin-section">
+
+    <div class="content-width">
+
+        <div class="admin-box">
+
+    <div>
+
+        <div class="section-tag">
+            ADMINISTRATION
+        </div>
+
+        <h2>
+            Admin Login
+        </h2>
+
+        <p>
+            Authorized personnel can login
+            and manage submitted complaints.
+        </p>
+
+    </div>
+
+    <button
+        type="button"
+        id="adminLoginBtn"
+        class="admin-button"
+    >
+
+        <i class="fa-solid fa-lock"></i>
+
+        Admin Login
+
+    </button>
+
+</div>
+
+<div id="adminResult"></div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     FOOTER
+========================= -->
+
+<footer>
+
+    <div class="footer-inner">
+
+        <div class="footer-brand">
+
+            <div class="brand">
+
+                <div class="brand-mark">
+    <img src="logo.png" alt="CivicConnect Banka Logo">
+</div>
+
+            </div>
+
+            <p>
+                Banka के नागरिकों के लिए डिजिटल civic platform.
+            </p>
+
+        </div>
+
+
+        <div class="footer-links">
+
+            <a href="#home">शहर</a>
+            <a href="#report">शिकायत</a>
+            <a href="#track">ट्रैक करें</a>
+            <a href="#schemes">योजनाएं</a>
+
+        </div>
+
+
+        <div class="footer-copy">
+
+            © 2026 CivicConnect Banka
+
+        </div>
+
+    </div>
+
+</footer>
+
+
+
+<!-- Leaflet -->
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+<!-- Existing JavaScript -->
+
 <script src="script.js"></script>
-</body></html>
+
+</body>
+</html>
+```
