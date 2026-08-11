@@ -827,7 +827,14 @@ async function submitComplaint(event) {
 
 
     // Validation
+if (!otpVerified) {
 
+    alert(
+        "कृपया पहले mobile number का OTP verify करें।"
+    );
+
+    return;
+}
     if (
         !name ||
         !mobile ||
@@ -880,6 +887,21 @@ async function submitComplaint(event) {
 
 
     try {
+        const photoInput = document.getElementById("complaintPhoto");
+
+const formData = new FormData();
+
+formData.append("name", name);
+formData.append("mobile", mobile);
+formData.append("category", category);
+formData.append("description", description);
+formData.append("address", address);
+formData.append("latitude", Number(latitude));
+formData.append("longitude", Number(longitude));
+
+if (photoInput && photoInput.files.length > 0) {
+    formData.append("complaintPhoto", photoInput.files[0]);
+}
 
         const response =
             await fetch(
@@ -887,30 +909,9 @@ async function submitComplaint(event) {
                 {
                     method: "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
+                    
 
-                    body: JSON.stringify({
-
-                        name,
-
-                        mobile,
-
-                        category,
-
-                        description,
-
-                        address,
-
-                        latitude:
-                            Number(latitude),
-
-                        longitude:
-                            Number(longitude)
-
-                    })
+                   body: formData
 
                 }
             );
@@ -1135,6 +1136,40 @@ function setupTracking() {
                             <strong>Description:</strong>
                             ${complaint.description ?? "-"}
                         </p>
+                            <div class="admin-complaint-photo">
+
+    <strong>Complaint Photo:</strong>
+
+    ${
+        complaint.image_url
+            ? `
+                <br>
+
+                <a
+                    href="${complaint.image_url}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    <img
+                        src="${complaint.image_url}"
+                        alt="Complaint Photo"
+                        style="
+                            max-width: 300px;
+                            width: 100%;
+                            margin-top: 10px;
+                            border-radius: 10px;
+                            display: block;
+                            cursor: pointer;
+                        "
+                    >
+                </a>
+              `
+            : `
+                <p>No photo uploaded.</p>
+              `
+    }
+
+</div>
 
                     </div>
                     `;
@@ -1278,6 +1313,7 @@ async function loadAdminComplaints() {
 
         const complaints =
             Array.isArray(result)
+            
                 ? result
                 : (
                     result.data ||
@@ -1347,14 +1383,42 @@ async function loadAdminComplaints() {
                         </p>
 
                         <p>
-                            <strong>Description:</strong>
-                            ${complaint.description ?? "-"}
-                        </p>
+    <strong>Description:</strong>
+    ${complaint.description ?? "-"}
+</p>
 
-                        <p>
-                            <strong>Date:</strong>
-                            ${complaint.created ?? "-"}
-                        </p>
+<div class="admin-complaint-photo">
+
+    <strong>Complaint Photo:</strong>
+
+    ${
+        complaint.image_url
+            ? `
+                <br>
+                <img
+                    src="${complaint.image_url}"
+                    alt="Complaint Photo"
+                    onclick="window.open('${complaint.image_url}', '_blank')"
+                    style="
+                        max-width: 300px;
+                        width: 100%;
+                        margin-top: 10px;
+                        border-radius: 10px;
+                        display: block;
+                    "
+                >
+              `
+            : `
+                <p>No photo uploaded.</p>
+              `
+    }
+
+</div>
+
+<p>
+    <strong>Date:</strong>
+    ${complaint.created ?? "-"}
+</p>
                         <p>
     <strong>Assigned To:</strong>
 
@@ -1490,6 +1554,7 @@ async function loadAdminComplaints() {
 
         setupAdminSearch();
         setupAdminStatusUpdates();
+        setupOtpModeControl();
         setupAdminLogout();
 
     } catch (error) {
@@ -1619,6 +1684,101 @@ function setupAdminStatusUpdates() {
             });
         });
 }
+function setupOtpModeControl() {
+
+    const control =
+        document.getElementById("otpModeControl");
+
+    if (!control) return;
+
+    control.style.display = "block";
+
+    const modes =
+        document.querySelectorAll(
+            'input[name="otpMode"]'
+        );
+
+    modes.forEach(mode => {
+
+        mode.addEventListener("change", async () => {
+
+            const selectedMode =
+                mode.value;
+
+            const password =
+                prompt(
+                    "OTP Mode बदलने के लिए दूसरा password डालें:"
+                );
+
+            if (password === null) {
+                document.querySelector(
+                    'input[name="otpMode"][value="2factor"]'
+                ).checked = true;
+
+                return;
+            }
+
+            try {
+
+                const token =
+                    sessionStorage.getItem(
+                        "adminToken"
+                    );
+
+                const response =
+                    await fetch(
+                        "/api/admin/otp-mode-password",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json",
+
+                                "Authorization":
+                                    `Bearer ${token}`
+                            },
+
+                            body: JSON.stringify({
+                                password,
+                                mode: selectedMode
+                            })
+                        }
+                    );
+
+                const result =
+                    await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error ||
+                        "Wrong password"
+                    );
+                }
+
+                alert(
+                    selectedMode === "fixed"
+                        ? "Fixed OTP mode selected."
+                        : "2Factor SMS mode selected."
+                );
+
+            } catch (error) {
+
+                alert(
+                    "❌ " +
+                    error.message
+                );
+
+                document.querySelector(
+                    'input[name="otpMode"][value="2factor"]'
+                ).checked = true;
+            }
+
+        });
+
+    });
+
+}
 
 
 function setupAdminLogout() {
@@ -1666,3 +1826,231 @@ function setupAdminLogout() {
         }
     });
 }
+// ==========================================
+// TEST OTP SYSTEM
+// ==========================================
+
+let otpVerified = false;
+
+
+// =========================
+// REAL SMS OTP - SEND
+// =========================
+
+document
+.getElementById("sendOtpBtn")
+.addEventListener("click", async () => {
+
+    const mobile =
+        document.getElementById("mobile").value.trim();
+
+    const otpMessage =
+        document.getElementById("otpMessage");
+
+    const otpBox =
+        document.getElementById("otpBox");
+
+
+    // Mobile validation
+    if (!/^[6-9]\d{9}$/.test(mobile)) {
+
+        otpMessage.textContent =
+            "कृपया सही 10 digit mobile number डालें।";
+
+        otpMessage.style.color = "red";
+
+        return;
+    }
+
+
+    otpVerified = false;
+    const sendOtpBtn =
+    document.getElementById("sendOtpBtn");
+
+sendOtpBtn.disabled = true;
+
+
+    otpMessage.textContent =
+        "OTP भेजा जा रहा है...";
+
+    otpMessage.style.color = "green";
+
+
+    try {
+
+        const response =
+            await fetch("/api/send-otp", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    mobile
+                })
+
+            });
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.error ||
+                "OTP भेजने में समस्या हुई।"
+            );
+
+        }
+
+
+        otpBox.style.display = "block";
+
+
+        otpMessage.textContent =
+            "OTP आपके mobile number पर भेज दिया गया है।";
+
+        otpMessage.style.color = "green";
+
+
+    } catch (error) {
+
+        console.error(
+            "OTP send error:",
+            error
+        );
+
+
+        otpMessage.textContent =
+            error.message ||
+            "OTP भेजने में समस्या हुई।";
+
+        otpMessage.style.color = "red";
+
+    }
+
+});
+
+
+// =========================
+// REAL SMS OTP - VERIFY
+// =========================
+
+document
+.getElementById("verifyOtpBtn")
+.addEventListener("click", async () => {
+
+    const mobile =
+        document.getElementById("mobile").value.trim();
+
+    const enteredOTP =
+        document.getElementById("otp").value.trim();
+
+    const otpMessage =
+        document.getElementById("otpMessage");
+
+
+    if (!enteredOTP) {
+
+        otpMessage.textContent =
+            "OTP डालें।";
+
+        otpMessage.style.color = "red";
+
+        return;
+    }
+
+
+    if (!/^\d{6}$/.test(enteredOTP)) {
+
+        otpMessage.textContent =
+            "6 digit OTP डालें।";
+
+        otpMessage.style.color = "red";
+
+        return;
+    }
+
+
+    otpMessage.textContent =
+        "OTP verify हो रहा है...";
+
+    otpMessage.style.color = "green";
+
+
+    try {
+
+        const response =
+            await fetch("/api/verify-otp", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    mobile,
+
+                    otp: enteredOTP
+
+                })
+
+            });
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.error ||
+                "OTP गलत है।"
+            );
+
+        }
+
+
+        otpVerified = true;
+        const verifyBtn =
+    document.getElementById("verifyOtpBtn");
+
+verifyBtn.disabled = true;
+verifyBtn.textContent = "✓ OTP Verified";
+
+
+        otpMessage.textContent =
+            "✓ Mobile number verified.";
+
+        otpMessage.style.color = "green";
+
+
+    } catch (error) {
+
+        otpVerified = false;
+
+
+        console.error(
+            "OTP verify error:",
+            error
+        );
+
+
+        otpMessage.textContent =
+            error.message ||
+            "OTP verification failed.";
+
+        otpMessage.style.color = "red";
+
+    }
+
+});

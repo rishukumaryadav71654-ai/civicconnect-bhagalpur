@@ -1,4 +1,4 @@
-```html
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -164,6 +164,14 @@
             </div>
 
         </div>
+            <div class="photo-credit">
+        Photo: Jitagna ·
+        <a href="https://creativecommons.org/licenses/by-sa/4.0/"
+           target="_blank"
+           rel="noopener">
+            CC BY-SA 4.0
+        </a>
+    </div>
 
     </div>
 
@@ -280,10 +288,12 @@
 
             <div class="identity-card identity-large">
 
-                <div class="identity-placeholder">
-                    <i class="fa-solid fa-mountain-sun"></i>
-                    <span>Banka</span>
-                </div>
+                
+<div class="identity-placeholder">
+    <img src="odhni-dam.png" alt="Odhni Dam, Banka">
+</div>
+
+
 
                 <div class="identity-caption">
                     <strong>बांका</strong>
@@ -428,8 +438,47 @@
                                 id="mobile"
                                 name="mobile"
                                 placeholder="10 digit mobile number"
+                                maxlength="10"
+                                inputmode="numeric"
                                 required
                             >
+                            <div class="otp-section">
+
+    <button
+        type="button"
+        id="sendOtpBtn"
+    >
+        OTP भेजें
+    </button>
+
+    <div
+        id="otpBox"
+        style="display: none; margin-top: 8px;"
+    >
+
+        <input
+            type="text"
+            id="otp"
+            placeholder="6 digit OTP डालें"
+            maxlength="6"
+            inputmode="numeric"
+        >
+
+        <button
+            type="button"
+            id="verifyOtpBtn"
+        >
+            OTP Verify करें
+        </button>
+
+        <div
+            id="otpMessage"
+            style="margin-top: 6px;"
+        ></div>
+
+    </div>
+
+</div>
 
                         </div>
 
@@ -507,6 +556,26 @@
                         </small>
 
                     </div>
+                    <!-- PROBLEM PHOTO -->
+
+<div class="form-group">
+
+    <label>
+        समस्या की फोटो
+    </label>
+
+    <input
+        type="file"
+        id="complaintPhoto"
+        name="complaintPhoto"
+        accept="image/jpeg,image/png,image/webp"
+    >
+
+    <small>
+        समस्या की साफ फोटो अपलोड करें (JPG, PNG या WEBP)
+    </small>
+
+</div>
 
 
                     <div class="form-note">
@@ -981,6 +1050,45 @@
 </div>
 
 <div id="adminResult"></div>
+<div
+    id="otpModeControl"
+    style="
+        display: none;
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+    "
+>
+
+    <strong>OTP Mode</strong>
+
+    <div style="margin-top: 10px;">
+
+        <label>
+            <input
+                type="radio"
+                name="otpMode"
+                value="fixed"
+                id="fixedOtpMode"
+            >
+            Fixed OTP
+        </label>
+
+        <label style="margin-left: 20px;">
+            <input
+                type="radio"
+                name="otpMode"
+                value="2factor"
+                id="twoFactorOtpMode"
+                checked
+            >
+            2Factor SMS
+        </label>
+
+    </div>
+
+</div>
 
     </div>
 
@@ -1048,4 +1156,4 @@
 
 </body>
 </html>
-```
+

@@ -4,16 +4,327 @@ require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");
 const crypto = require("crypto");
 const path = require("path");
+const https = require("https");
+const multer = require("multer");
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024
+    },
+    fileFilter: (req, file, cb) => {
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        ];
+
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error("Only JPG, PNG and WEBP images are allowed"));
+        }
+
+    }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.use(express.json());
+// =========================
+// REAL OTP - 2FACTOR
+// =========================
 
+// =========================
+// REAL OTP - 2FACTOR
+// =========================
+
+const otpSessions = new Map();
+
+
+// =========================
+// SEND OTP
+// =========================
+
+app.post("/api/send-otp", async (req, res) => {
+
+    try {
+
+        const mobile =
+            String(req.body.mobile || "").trim();
+
+
+        if (!/^[6-9]\d{9}$/.test(mobile)) {
+
+            return res.status(400).json({
+                error: "Invalid mobile number"
+            });
+
+        }
+        console.log("CURRENT OTP MODE:", otpMode);
+        if (otpMode === "fixed") {
+
+    const fixedOtp =
+        String(process.env.FIXED_OTP || "");
+
+    if (!/^\d{6}$/.test(fixedOtp)) {
+
+        return res.status(500).json({
+            error: "Fixed OTP is not configured"
+        });
+
+    }
+
+    otpSessions.set(mobile, {
+        otp: fixedOtp,
+        createdAt: Date.now()
+    });
+
+    console.log(
+        "Fixed OTP generated for:",
+        mobile
+    );
+
+    return res.json({
+        success: true,
+        message: "OTP generated successfully"
+    });
+}
+
+
+        const apiKey =
+            process.env.TWO_FACTOR_API_KEY;
+
+
+        if (!apiKey) {
+
+            return res.status(500).json({
+                error: "OTP service is not configured"
+            });
+
+        }
+
+
+        // Generate a new 6-digit OTP
+        const otp =
+            Math.floor(
+                100000 +
+                Math.random() * 900000
+            ).toString();
+
+
+        // Send OTP through 2Factor
+        const response =
+            await fetch(
+                `https://2factor.in/API/V1/${apiKey}/SMS/${mobile}/${otp}`,
+                {
+                    method: "POST"
+                }
+            );
+
+
+        const rawResponse =
+            await response.text();
+
+
+        console.log(
+            "2Factor HTTP status:",
+            response.status
+        );
+
+        console.log(
+            "2Factor response:",
+            rawResponse
+        );
+
+
+        let result = null;
+
+        try {
+            result = JSON.parse(rawResponse);
+        } catch {
+            result = null;
+        }
+
+
+        // Save OTP for verification
+        if (
+            response.ok &&
+            (
+                !result ||
+                result.Status === "Success"
+            )
+        ) {
+
+            otpSessions.set(mobile, {
+
+                otp: otp,
+
+                createdAt:
+                    Date.now()
+
+            });
+
+
+            return res.json({
+
+                success: true,
+
+                message:
+                    "OTP sent successfully"
+
+            });
+
+        }
+
+
+        return res.status(500).json({
+
+            error:
+                result?.Details ||
+                "Could not send OTP"
+
+        });
+
+
+    } catch (err) {
+
+        console.error(
+            "Send OTP error:",
+            err
+        );
+
+
+        return res.status(500).json({
+
+            error:
+                "OTP service error"
+
+        });
+
+    }
+
+});
+
+
+// =========================
+// VERIFY OTP
+// =========================
+
+app.post("/api/verify-otp", async (req, res) => {
+
+    try {
+
+        const mobile =
+            String(req.body.mobile || "").trim();
+
+
+        const otp =
+            String(req.body.otp || "").trim();
+
+
+        if (
+            !/^[6-9]\d{9}$/.test(mobile) ||
+            !/^\d{6}$/.test(otp)
+        ) {
+
+            return res.status(400).json({
+
+                error:
+                    "Invalid mobile number or OTP"
+
+            });
+
+        }
+
+
+        const session =
+            otpSessions.get(mobile);
+
+
+        if (!session) {
+
+            return res.status(400).json({
+
+                error:
+                    "OTP not found or expired"
+
+            });
+
+        }
+
+
+        // OTP valid for 5 minutes
+        if (
+            Date.now() -
+            session.createdAt >
+            5 * 60 * 1000
+        ) {
+
+            otpSessions.delete(mobile);
+
+
+            return res.status(400).json({
+
+                error:
+                    "OTP expired. Please request a new OTP."
+
+            });
+
+        }
+
+
+        if (otp !== session.otp) {
+
+            return res.status(400).json({
+
+                error:
+                    "Invalid OTP"
+
+            });
+
+        }
+
+
+        // OTP verified successfully
+        otpSessions.delete(mobile);
+
+
+        return res.json({
+
+            success: true,
+
+            verified: true
+
+        });
+
+
+    } catch (err) {
+
+        console.error(
+            "Verify OTP error:",
+            err
+        );
+
+
+        return res.status(500).json({
+
+            error:
+                "OTP verification error"
+
+        });
+
+    }
+
+});
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
 
-const ADMIN_PIN = process.env.ADMIN_PIN || "civicconnectrishu9031@";
+const ADMIN_PIN = process.env.ADMIN_PIN;
+let otpMode = "2factor";
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -38,7 +349,10 @@ function auth(req, res, next) {
 // CREATE COMPLAINT
 // =========================
 
-app.post("/api/complaints", async (req, res) => {
+app.post(
+    "/api/complaints",
+    upload.single("complaintPhoto"),
+    async (req, res) => {
   try {
     const name = String(req.body.name || "").trim();
     const phone = String(req.body.phone || req.body.mobile || "").trim();
@@ -70,6 +384,53 @@ app.post("/api/complaints", async (req, res) => {
       req.body.longitude !== ""
         ? Number(req.body.longitude)
         : null;
+        // Upload complaint photo to Supabase Storage
+let photoUrl = null;
+
+if (req.file) {
+    const fileExtension =
+        req.file.originalname
+            .split(".")
+            .pop()
+            .toLowerCase();
+
+    const fileName =
+        `complaint-${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${fileExtension}`;
+
+    const { error: uploadError } =
+        await supabase.storage
+            .from("complaint-photos")
+            .upload(
+                fileName,
+                req.file.buffer,
+                {
+                    contentType: req.file.mimetype,
+                    upsert: false
+                }
+            );
+
+    if (uploadError) {
+        console.error(
+            "Photo upload failed:",
+            uploadError.message
+        );
+
+        return res.status(500).json({
+            error: "Could not upload complaint photo"
+        });
+    }
+
+    const {
+        data: publicUrlData
+    } =
+        supabase.storage
+            .from("complaint-photos")
+            .getPublicUrl(fileName);
+
+    photoUrl =
+        publicUrlData.publicUrl;
+        console.log("PHOTO URL:", photoUrl);
+}
 
     // Validation
     if (
@@ -99,7 +460,8 @@ app.post("/api/complaints", async (req, res) => {
           Number.isFinite(latitude) ? latitude : null,
         longitude:
           Number.isFinite(longitude) ? longitude : null,
-        status: "Submitted"
+        status: "Submitted",
+        image_url: photoUrl
       })
       .select("complaint_id,created_at")
       .single();
@@ -148,7 +510,7 @@ app.get("/api/complaints/:id", async (req, res) => {
     const { data, error } = await supabase
       .from("complaints")
       .select(
-        "complaint_id,name,phone,category,description,location,latitude,longitude,status,assigned_to,created_at"
+        "complaint_id,name,phone,category,description,location,latitude,longitude,status,assigned_to,image_url,created_at"
       )
       .eq("complaint_id", complaintId)
       .maybeSingle();
@@ -182,6 +544,7 @@ app.get("/api/complaints/:id", async (req, res) => {
       longitude: data.longitude,
       status: data.status,
       assigned_to: data.assigned_to,
+      image_url: data.image_url,
       created: data.created_at
     });
 
@@ -217,7 +580,58 @@ app.post("/api/admin/login", (req, res) => {
     token
   });
 });
+// =========================
+// ADMIN - OTP MODE PASSWORD
+// =========================
+// =========================
+// ADMIN - CHANGE OTP MODE
+// =========================
 
+app.post("/api/admin/otp-mode-password", auth, (req, res) => {
+
+    const password =
+        String(req.body.password || "").trim();
+
+    const mode =
+        String(req.body.mode || "").trim();
+
+    const correctPassword =
+        String(process.env.OTP_MODE_PASSWORD || "");
+
+    if (!correctPassword) {
+        return res.status(500).json({
+            error: "OTP mode password is not configured"
+        });
+    }
+
+    if (password !== correctPassword) {
+        return res.status(401).json({
+            error: "Wrong OTP mode password"
+        });
+    }
+
+    if (
+        mode !== "fixed" &&
+        mode !== "2factor"
+    ) {
+        return res.status(400).json({
+            error: "Invalid OTP mode"
+        });
+    }
+
+    otpMode = mode;
+
+    console.log(
+        "OTP mode changed to:",
+        otpMode
+    );
+
+    return res.json({
+        ok: true,
+        mode: otpMode
+    });
+
+});
 // =========================
 // ADMIN LOGOUT
 // =========================
@@ -243,7 +657,7 @@ app.get("/api/admin/complaints", auth, async (req, res) => {
     const { data, error } = await supabase
       .from("complaints")
       .select(
-        "complaint_id,name,phone,category,description,location,latitude,longitude,status,assigned_to,created_at"
+        "complaint_id,name,phone,category,description,location,latitude,longitude,status,assigned_to,created_at,image_url"
       )
       .order("created_at", {
         ascending: false
@@ -272,7 +686,8 @@ app.get("/api/admin/complaints", auth, async (req, res) => {
       longitude: c.longitude,
       status: c.status,
       assigned_to: c.assigned_to,
-      created: c.created_at
+      created: c.created_at,
+      image_url: c.image_url
     }));
 
     return res.json(complaints);
@@ -331,7 +746,7 @@ app.patch(
 })
         .eq("complaint_id", complaintId)
         .select(
-          "complaint_id,name,phone,category,description,location,latitude,longitude,status,assigned_to,created_at"
+          "complaint_id,name,phone,category,description,location,latitude,longitude,status,assigned_to,created_at,image_url"
         )
         .maybeSingle();
 
@@ -364,7 +779,8 @@ app.patch(
         longitude: data.longitude,
         status: data.status,
         assigned_to: data.assigned_to,
-        created: data.created_at
+        created: data.created_at,
+        image_url: data.image_url
       });
 
     } catch (err) {
