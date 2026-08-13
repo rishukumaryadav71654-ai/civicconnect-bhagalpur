@@ -548,11 +548,11 @@
                             id="description"
                             name="description"
                             rows="5"
-                            placeholder="समस्या के बारे में बताएं..."
+                            placeholder="अपनी शिकायत का विवरण और समस्या का सटीक स्थान स्पष्ट रूप से दर्ज करें..."
                             required
                         ></textarea>
                         <small>
-                            कम से कम 10 characters लिखें
+                            कम से कम 10 characters लिखें। कृपया समस्या का स्पष्ट विवरण और शिकायत स्थल की नज़दीकी पहचान लिखें।
                         </small>
 
                     </div>
@@ -564,16 +564,64 @@
         समस्या की फोटो
     </label>
 
-    <input
-        type="file"
-        id="complaintPhoto"
-        name="complaintPhoto"
-        accept="image/jpeg,image/png,image/webp"
-    >
+    <button
+    type="button"
+    id="photoUploadBtn"
+    style="
+        padding: 10px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+    "
+>
+    📷 फोटो अपलोड करें
+</button>
+
+<input
+    type="file"
+    id="complaintPhoto"
+    name="complaintPhoto"
+    accept="image/jpeg,image/png,image/webp"
+    style="display: none;"
+>
 
     <small>
         समस्या की साफ फोटो अपलोड करें (JPG, PNG या WEBP)
     </small>
+    <div
+    id="photoSecurityNotice"
+    style="
+        display: none;
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        font-size: 13px;
+        line-height: 1.5;
+    "
+>
+    🔒 <strong>Photo Privacy & Security</strong><br>
+    आपकी uploaded photo का उपयोग केवल शिकायत की जाँच,
+    सत्यापन एवं आवश्यक कार्रवाई के लिए किया जाएगा।
+    कृपया केवल शिकायत से संबंधित फोटो अपलोड करें।
+    <strong>अश्लील, आपत्तिजनक या गैर-कानूनी सामग्री वाली फोटो
+    अपलोड न करें।</strong>
+    <br><br>
+
+<button
+    type="button"
+    id="continuePhotoUpload"
+    style="
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    "
+>
+    आगे बढ़ें और फोटो चुनें
+</button>
+</div>
 
 </div>
 
@@ -776,6 +824,14 @@
                             placeholder="Complaint ID"
                             required
                         >
+                        <input
+    type="tel"
+    id="trackingMobile"
+    placeholder="Registered Mobile Number"
+    maxlength="10"
+    inputmode="numeric"
+    required
+>
 
                         <button type="submit">
                             ट्रैक करें
@@ -1071,6 +1127,7 @@
                 name="otpMode"
                 value="fixed"
                 id="fixedOtpMode"
+                checked
             >
             Fixed OTP
         </label>
@@ -1081,7 +1138,6 @@
                 name="otpMode"
                 value="2factor"
                 id="twoFactorOtpMode"
-                checked
             >
             2Factor SMS
         </label>
@@ -1153,6 +1209,8 @@
 <!-- Existing JavaScript -->
 
 <script src="script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 </body>
 </html>

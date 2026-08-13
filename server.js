@@ -6,6 +6,175 @@ const crypto = require("crypto");
 const path = require("path");
 const https = require("https");
 const multer = require("multer");
+const sharp = require("sharp");
+const ort = require("onnxruntime-node");
+const NSFW_MODEL_PATH = path.join(
+    __dirname,
+    "models",
+    "model.onnx"
+);
+
+let nsfwSession = null;
+
+async function loadNSFWModel() {
+    if (!nsfwSession) {
+        console.log("Loading NSFW model...");
+        nsfwSession =
+            await ort.InferenceSession.create(
+                NSFW_MODEL_PATH
+            );
+        console.log("NSFW model loaded successfully");
+    }
+
+    return nsfwSession;
+}
+async function checkNSFW(imageBuffer) {
+    const session = await loadNSFWModel();
+
+    const  data  = await sharp(imageBuffer)
+        .resize(384, 384, {
+            fit: "fill"
+        })
+        .removeAlpha()
+        .raw()
+        .toBuffer();
+
+    const floatData = new Float32Array(
+        3 * 384 * 384
+    );
+
+    for (let y = 0; y < 384; y++) {
+        for (let x = 0; x < 384; x++) {
+
+            const pixelIndex =
+                (y * 384 + x) * 3;
+
+            const r = data[pixelIndex] / 255;
+            const g = data[pixelIndex + 1] / 255;
+            const b = data[pixelIndex + 2] / 255;
+
+            const baseIndex =
+                y * 384 + x;
+
+            floatData[baseIndex] =
+                (r - 0.5) / 0.5;
+
+            floatData[
+                384 * 384 + baseIndex
+            ] =
+                (g - 0.5) / 0.5;
+
+            floatData[
+                2 * 384 * 384 + baseIndex
+            ] =
+                (b - 0.5) / 0.5;
+        }
+    }
+
+    const inputTensor =
+        new ort.Tensor(
+            "float32",
+            floatData,
+            [1, 3, 384, 384]
+        );
+
+    const results =
+        await session.run({
+            pixel_values: inputTensor
+        });
+
+    const logits =
+        Array.from(results.logits.data);
+
+    const maxLogit =
+        Math.max(...logits);
+
+    const expValues =
+        logits.map(value =>
+            Math.exp(value - maxLogit)
+        );
+
+    const sum =
+        expValues.reduce(
+            (a, b) => a + b,
+            0
+        );
+
+    const probabilities =
+        expValues.map(
+            value => value / sum
+        );
+
+    return {
+        nsfwProbability: probabilities[0],
+        sfwProbability: probabilities[1]
+    };
+}
+console.log("ONNX Runtime loaded successfully");
+const fs = require("fs");
+const { execFile } = require("child_process");
+function blurFacesWithPython(inputPath, outputPath) {
+    return new Promise((resolve, reject) => {
+
+        const pythonPath = path.join(
+            __dirname,
+            "faceblur-env",
+            "Scripts",
+            "python.exe"
+        );
+
+        const scriptPath = path.join(
+            __dirname,
+            "face_blur_server.py"
+        );
+
+        execFile(
+            pythonPath,
+            [
+                scriptPath,
+                inputPath,
+                outputPath
+            ],
+            {
+                timeout: 120000
+            },
+            (error, stdout, stderr) => {
+
+                console.log(
+                    "Python blur output:",
+                    stdout
+                );
+
+                if (stderr) {
+                    console.log(
+                        "Python blur stderr:",
+                        stderr
+                    );
+                }
+
+                if (error) {
+                    console.error(
+                        "Face blur failed:",
+                        error
+                    );
+
+                    return reject(error);
+                }
+
+                if (!fs.existsSync(outputPath)) {
+                    return reject(
+                        new Error(
+                            "Blurred image was not created"
+                        )
+                    );
+                }
+
+                resolve(outputPath);
+            }
+        );
+    });
+}
+
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -322,9 +491,35 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
-
+console.log(
+    "SUPABASE KEY PRESENT:",
+    !!process.env.SUPABASE_KEY
+);
 const ADMIN_PIN = process.env.ADMIN_PIN;
-let otpMode = "2factor";
+let otpMode = "fixed";
+async function loadOtpMode() {
+    try {
+        const { data, error } = await supabase
+            .from("app_settings")
+            .select("value")
+            .eq("key", "otp_mode")
+            .maybeSingle();
+
+        if (error) {
+            console.error("Could not load OTP mode:", error.message);
+            return;
+        }
+
+        if (data && (data.value === "fixed" || data.value === "2factor")) {
+            otpMode = data.value;
+        }
+
+        console.log("OTP mode loaded:", otpMode);
+
+    } catch (err) {
+        console.error("OTP mode load error:", err);
+    }
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -388,50 +583,155 @@ app.post(
 let photoUrl = null;
 
 if (req.file) {
-    const fileExtension =
-        req.file.originalname
-            .split(".")
-            .pop()
-            .toLowerCase();
 
-    const fileName =
-        `complaint-${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${fileExtension}`;
+    const tempInputPath = path.join(
+        __dirname,
+        `complaint-temp-${Date.now()}-${crypto.randomBytes(6).toString("hex")}.jpg`
+    );
 
-    const { error: uploadError } =
-        await supabase.storage
-            .from("complaint-photos")
-            .upload(
-                fileName,
-                req.file.buffer,
-                {
-                    contentType: req.file.mimetype,
-                    upsert: false
-                }
-            );
+    const tempOutputPath = path.join(
+        __dirname,
+        `complaint-blurred-${Date.now()}-${crypto.randomBytes(6).toString("hex")}.jpg`
+    );
 
-    if (uploadError) {
-        console.error(
-            "Photo upload failed:",
-            uploadError.message
-        );
 
-        return res.status(500).json({
-            error: "Could not upload complaint photo"
-        });
-    }
+    try {
+        // Check image for NSFW content before processing
+const nsfwResult = await checkNSFW(req.file.buffer);
 
-    const {
-        data: publicUrlData
-    } =
-        supabase.storage
-            .from("complaint-photos")
-            .getPublicUrl(fileName);
+console.log(
+    "NSFW probability:",
+    nsfwResult.nsfwProbability
+);
 
-    photoUrl =
-        publicUrlData.publicUrl;
-        console.log("PHOTO URL:", photoUrl);
+console.log(
+    "SFW probability:",
+    nsfwResult.sfwProbability
+);
+
+// Block only high-confidence NSFW images
+if (nsfwResult.nsfwProbability >=0.50) {
+    console.log("🚫 NSFW IMAGE REJECTED");
+
+    return res.status(400).json({
+        error: "This image cannot be uploaded because it contains inappropriate content."
+    });
 }
 
+
+        // Save uploaded image temporarily
+        await sharp(req.file.buffer)
+            .rotate()
+            .jpeg({
+                quality: 88
+            })
+            .toFile(tempInputPath);
+
+
+        // Blur faces using Python + YuNet
+        await blurFacesWithPython(
+            tempInputPath,
+            tempOutputPath
+        );
+
+
+        // Read blurred image
+        const processedImage =
+            await fs.promises.readFile(
+                tempOutputPath
+            );
+
+
+        const fileName =
+            `complaint-${Date.now()}-${crypto.randomBytes(6).toString("hex")}.jpg`;
+
+
+        // Upload ONLY blurred image
+        const { error: uploadError } =
+            await supabase.storage
+                .from("complaint-photos")
+                .upload(
+                    fileName,
+                    processedImage,
+                    {
+                        contentType: "image/jpeg",
+                        upsert: false
+                    }
+                );
+
+
+        if (uploadError) {
+
+            console.error(
+                "Photo upload failed:",
+                uploadError.message
+            );
+
+            return res.status(500).json({
+                error: "Could not upload complaint photo"
+            });
+        }
+
+
+        const {
+            data: publicUrlData
+        } =
+            supabase.storage
+                .from("complaint-photos")
+                .getPublicUrl(
+                    fileName
+                );
+
+
+        photoUrl =
+            publicUrlData.publicUrl;
+
+
+        console.log(
+            "PHOTO URL:",
+            photoUrl
+        );
+
+
+    } finally {
+
+        // Delete temporary files
+        try {
+            if (
+                fs.existsSync(
+                    tempInputPath
+                )
+            ) {
+                await fs.promises.unlink(
+                    tempInputPath
+                );
+            }
+        } catch (cleanupError) {
+            console.error(
+                "Input cleanup failed:",
+                cleanupError.message
+            );
+        }
+
+
+        try {
+            if (
+                fs.existsSync(
+                    tempOutputPath
+                )
+            ) {
+                await fs.promises.unlink(
+                    tempOutputPath
+                );
+            }
+        } catch (cleanupError) {
+            console.error(
+                "Output cleanup failed:",
+                cleanupError.message
+            );
+        }
+    }
+}
     // Validation
     if (
       !name ||
@@ -500,12 +800,14 @@ app.get("/api/complaints/:id", async (req, res) => {
     const complaintId = String(req.params.id || "")
       .trim()
       .toUpperCase();
+      const mobile = String(req.query.mobile || "").trim();
 
     if (!complaintId) {
       return res.status(400).json({
         error: "Complaint ID required"
       });
     }
+   
 
     const { data, error } = await supabase
       .from("complaints")
@@ -513,6 +815,7 @@ app.get("/api/complaints/:id", async (req, res) => {
         "complaint_id,name,phone,category,description,location,latitude,longitude,status,assigned_to,image_url,created_at"
       )
       .eq("complaint_id", complaintId)
+      .eq("phone", mobile)
       .maybeSingle();
 
     if (error) {
@@ -587,7 +890,7 @@ app.post("/api/admin/login", (req, res) => {
 // ADMIN - CHANGE OTP MODE
 // =========================
 
-app.post("/api/admin/otp-mode-password", auth, (req, res) => {
+app.post("/api/admin/otp-mode-password", auth,async(req, res) => {
 
     const password =
         String(req.body.password || "").trim();
@@ -619,7 +922,31 @@ app.post("/api/admin/otp-mode-password", auth, (req, res) => {
         });
     }
 
-    otpMode = mode;
+   console.log("REQUESTED OTP MODE:", mode);
+
+otpMode = mode;
+
+console.log("CURRENT SERVER OTP MODE:", otpMode);
+
+const { error: otpModeSaveError } = await supabase
+    .from("app_settings")
+    .update({
+        value: otpMode
+    })
+    .eq("key", "otp_mode");
+
+if (otpModeSaveError) {
+    console.error(
+        "Could not save OTP mode:",
+        otpModeSaveError.message
+    );
+
+    return res.status(500).json({
+        error: "Could not save OTP mode"
+    });
+}
+
+console.log("OTP mode saved:", otpMode);
 
     console.log(
         "OTP mode changed to:",
@@ -631,6 +958,47 @@ app.post("/api/admin/otp-mode-password", auth, (req, res) => {
         mode: otpMode
     });
 
+});
+app.get("/api/admin/otp-mode", auth, async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("app_settings")
+            .select("value")
+            .eq("key", "otp_mode")
+            .maybeSingle();
+
+        if (error) {
+            console.error(
+                "Could not get OTP mode:",
+                error.message
+            );
+
+            return res.status(500).json({
+                error: "Could not get OTP mode"
+            });
+        }
+
+        const mode =
+            data &&
+            (data.value === "fixed" ||
+             data.value === "2factor")
+                ? data.value
+                : "fixed";
+
+        return res.json({
+            mode
+        });
+
+    } catch (err) {
+        console.error(
+            "OTP mode GET error:",
+            err
+        );
+
+        return res.status(500).json({
+            error: "Server error"
+        });
+    }
 });
 // =========================
 // ADMIN LOGOUT
@@ -843,10 +1211,12 @@ app.get("*", (req, res) => {
 // START SERVER
 // =========================
 
-app.listen(PORT, () => {
-  console.log(
-    `CivicConnect running on http://localhost:${PORT}`
-  );
+app.listen(PORT, async () => {
+    console.log(
+        `CivicConnect running on http://localhost:${PORT}`
+    );
+
+    await loadOtpMode();
 });
 
 testSupabase();

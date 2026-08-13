@@ -5,6 +5,8 @@
 
 let map = null;
 let marker = null;
+let userProvidedLocation = false;
+let complaintReceiptData = null;
 
 // Banka, Bihar
 const DEFAULT_LAT = 24.8877;
@@ -26,6 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setupComplaintForm();
 
     setupTracking();
+
+    setupPhotoSecurityNotice()
 
     setupAdmin();
 
@@ -82,6 +86,7 @@ function initializeMap() {
 
         const lat = event.latlng.lat;
         const lng = event.latlng.lng;
+        userProvidedLocation = true;
 
         setMarker(
             lat,
@@ -295,13 +300,17 @@ function setupCurrentLocation() {
 // GET CURRENT LOCATION
 // ======================================================
 
+// ======================================================
+// GET CURRENT LOCATION - HIGH ACCURACY
+// ======================================================
+
 function getCurrentLocation() {
 
     const button =
-        document.getElementById(
-            "currentLocationBtn"
-        );
+        document.getElementById("currentLocationBtn");
 
+    const status =
+        document.getElementById("locationStatus");
 
     if (!navigator.geolocation) {
 
@@ -310,145 +319,291 @@ function getCurrentLocation() {
         );
 
         return;
-
     }
-
 
     button.disabled = true;
 
-    button.innerHTML =
-        `
+    button.innerHTML = `
         <i class="fa-solid fa-spinner fa-spin"></i>
-        Location मिल रही है...
-        `;
-
-
-    const status =
-        document.getElementById(
-            "locationStatus"
-        );
-
+        Accurate location मिल रही है...
+    `;
 
     if (status) {
 
-        status.innerHTML =
-            `
+        status.innerHTML = `
             <i class="fa-solid fa-spinner fa-spin"></i>
-            आपकी current location प्राप्त की जा रही है...
-            `;
+            GPS से सबसे accurate location प्राप्त की जा रही है...
+        `;
+
+    }
+
+    let bestPosition = null;
+    let watchId = null;
+
+    const startTime = Date.now();
+    const MAX_TIME = 30000;
+
+
+    function handlePosition(position) {
+
+        const accuracy =
+            position.coords.accuracy;
+
+        console.log(
+            "GPS Reading:",
+            position.coords.latitude,
+            position.coords.longitude,
+            "Accuracy:",
+            accuracy,
+            "meters"
+        );
+
+
+        // सबसे अच्छी accuracy वाली location save करें
+        if (
+            !bestPosition ||
+            accuracy < bestPosition.coords.accuracy
+        ) {
+
+            bestPosition = position;
+
+            console.log(
+                "BEST GPS ACCURACY:",
+                accuracy,
+                "meters"
+            );
+
+
+            if (status) {
+
+                status.innerHTML = `
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                    GPS accuracy: ${Math.round(accuracy)} meters
+                `;
+
+            }
+
+        }
+
+
+        // बहुत अच्छी location मिल गई
+        if (accuracy <= 10) {
+
+            finishLocation();
+
+            return;
+
+        }
+
+
+        // 30 seconds पूरे होने पर best location use करें
+        if (
+            Date.now() - startTime >= MAX_TIME
+        ) {
+
+            finishLocation();
+
+        }
 
     }
 
 
-    navigator.geolocation.getCurrentPosition(
+    function finishLocation() {
 
-        function (position) {
+        if (watchId !== null) {
 
-            console.log(
-                "Current location:",
-                position.coords.latitude,
-                position.coords.longitude
+            navigator.geolocation.clearWatch(
+                watchId
             );
 
-
-            const lat =
-                position.coords.latitude;
-
-            const lng =
-                position.coords.longitude;
-
-
-            // Move map
-            setMarker(
-                lat,
-                lng,
-                "📍 आपकी वर्तमान location"
-            );
-
-
-            // Save coordinates
-            updateCoordinates(
-                lat,
-                lng
-            );
-
-
-            // Find address
-            reverseGeocode(
-                lat,
-                lng
-            );
-
-
-            button.disabled = false;
-
-            button.innerHTML =
-                `
-                <i class="fa-solid fa-crosshairs"></i>
-                मेरी वर्तमान location
-                `;
-
-        },
-
-
-        function (error) {
-
-            console.error(
-                "Geolocation error:",
-                error
-            );
-
-
-            let message =
-                "Location प्राप्त नहीं हो सकी।";
-
-
-            if (error.code === 1) {
-
-                message =
-                    "Location permission blocked है। Browser में इस site की Location permission Allow करें।";
-
-            }
-
-            else if (error.code === 2) {
-
-                message =
-                    "आपकी location उपलब्ध नहीं है। GPS/Location चालू करके दोबारा कोशिश करें।";
-
-            }
-
-            else if (error.code === 3) {
-
-                message =
-                    "Location मिलने में ज्यादा समय लग गया। दोबारा कोशिश करें।";
-
-            }
-
-
-            showLocationError(message);
-
-
-            button.disabled = false;
-
-            button.innerHTML =
-                `
-                <i class="fa-solid fa-crosshairs"></i>
-                मेरी वर्तमान location
-                `;
-
-        },
-
-
-        {
-            enableHighAccuracy: true,
-
-            timeout: 20000,
-
-            maximumAge: 0
+            watchId = null;
 
         }
 
-    );
+
+        if (!bestPosition) {
+
+            showLocationError(
+                "Accurate location प्राप्त नहीं हो सकी।"
+            );
+
+            resetButton();
+
+            return;
+
+        }
+
+
+        const lat =
+            bestPosition.coords.latitude;
+
+        const lng =
+            bestPosition.coords.longitude;
+
+        const accuracy =
+            bestPosition.coords.accuracy;
+
+
+        console.log(
+            "================================"
+        );
+
+        console.log(
+            "FINAL LOCATION"
+        );
+
+        console.log(
+            "Latitude:",
+            lat
+        );
+
+        console.log(
+            "Longitude:",
+            lng
+        );
+
+        console.log(
+            "Final Accuracy:",
+            accuracy,
+            "meters"
+        );
+
+        console.log(
+            "================================"
+        );
+
+
+        userProvidedLocation = true;
+
+
+        // Map marker
+        setMarker(
+            lat,
+            lng,
+            "📍 आपकी वर्तमान location"
+        );
+
+
+        // Save coordinates
+        updateCoordinates(
+            lat,
+            lng
+        );
+
+
+        // Automatically find address
+        reverseGeocode(
+            lat,
+            lng
+        );
+
+
+        if (status) {
+
+            status.innerHTML = `
+                <i class="fa-solid fa-location-dot"></i>
+                Location मिली — Accuracy लगभग ${Math.round(accuracy)} meters
+            `;
+
+        }
+
+
+        resetButton();
+
+    }
+
+
+    function resetButton() {
+
+        button.disabled = false;
+
+        button.innerHTML = `
+            <i class="fa-solid fa-crosshairs"></i>
+            मेरी वर्तमान location
+        `;
+
+    }
+
+
+    function handleError(error) {
+
+        console.error(
+            "Geolocation error:",
+            error
+        );
+
+
+        if (watchId !== null) {
+
+            navigator.geolocation.clearWatch(
+                watchId
+            );
+
+            watchId = null;
+
+        }
+
+
+        let message =
+            "Location प्राप्त नहीं हो सकी।";
+
+
+        if (error.code === 1) {
+
+            message =
+                "Location permission blocked है। Browser में इस site की Location permission Allow करें।";
+
+        }
+
+        else if (error.code === 2) {
+
+            message =
+                "Location उपलब्ध नहीं है। Windows Location चालू करके दोबारा कोशिश करें।";
+
+        }
+
+        else if (error.code === 3) {
+
+            message =
+                "Location मिलने में ज्यादा समय लग गया। दोबारा कोशिश करें।";
+
+        }
+
+
+        showLocationError(message);
+
+        resetButton();
+
+    }
+
+
+    // लगातार GPS readings लेना
+    watchId =
+        navigator.geolocation.watchPosition(
+
+            handlePosition,
+
+            handleError,
+
+            {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 10000
+            }
+
+        );
+
+
+    // Safety timeout
+    setTimeout(function () {
+
+        if (watchId !== null) {
+
+            finishLocation();
+
+        }
+
+    }, MAX_TIME + 1000);
 
 }
 
@@ -622,6 +777,7 @@ async function searchLocation() {
 
         const lng =
             parseFloat(result.lon);
+            userProvidedLocation = true;
 
 
         setMarker(
@@ -683,6 +839,10 @@ async function searchLocation() {
 // REVERSE GEOCODING
 // ======================================================
 
+// ======================================================
+// REVERSE GEOCODING
+// ======================================================
+
 async function reverseGeocode(
     lat,
     lng
@@ -696,39 +856,220 @@ async function reverseGeocode(
             "&lat=" +
             encodeURIComponent(lat) +
             "&lon=" +
-            encodeURIComponent(lng);
+            encodeURIComponent(lng) +
+            "&zoom=18" +
+            "&addressdetails=1";
 
 
         const response =
             await fetch(url);
 
 
-        if (!response.ok) return;
+        if (!response.ok) {
+
+            console.error(
+                "Reverse geocoding failed:",
+                response.status
+            );
+
+            return;
+
+        }
 
 
         const data =
             await response.json();
 
 
+        console.log(
+            "REVERSE GEOCODE RESULT:",
+            data
+        );
+
+
         if (
-            data &&
+            !data ||
+            !data.address
+        ) {
+
+            return;
+
+        }
+
+
+        const a =
+            data.address;
+
+
+        /*
+         * जितनी useful location information उपलब्ध है,
+         * उसे priority के हिसाब से collect करेंगे।
+         */
+
+        const parts = [];
+
+
+        // Building / house
+        if (a.house_number) {
+
+            parts.push(
+                a.house_number
+            );
+
+        }
+
+
+        if (a.building) {
+
+            parts.push(
+                a.building
+            );
+
+        }
+
+
+        // Road / street
+        if (a.road) {
+
+            parts.push(
+                a.road
+            );
+
+        }
+
+
+        // Nearby locality
+        if (a.neighbourhood) {
+
+            parts.push(
+                a.neighbourhood
+            );
+
+        }
+
+        else if (a.suburb) {
+
+            parts.push(
+                a.suburb
+            );
+
+        }
+
+        else if (a.village) {
+
+            parts.push(
+                a.village
+            );
+
+        }
+
+
+        // Town / city
+        if (a.town) {
+
+            parts.push(
+                a.town
+            );
+
+        }
+
+        else if (a.city) {
+
+            parts.push(
+                a.city
+            );
+
+        }
+
+        else if (a.municipality) {
+
+            parts.push(
+                a.municipality
+            );
+
+        }
+
+
+        // District
+        if (a.county) {
+
+            parts.push(
+                a.county
+            );
+
+        }
+
+
+        // State
+        if (a.state) {
+
+            parts.push(
+                a.state
+            );
+
+        }
+
+
+        // Country
+        if (a.country) {
+
+            parts.push(
+                a.country
+            );
+
+        }
+
+
+        /*
+         * Duplicate values हटाएँ
+         */
+
+        const uniqueParts =
+            [...new Set(parts)];
+
+
+        let readableAddress =
+            uniqueParts.join(", ");
+
+
+        /*
+         * अगर structured address उपलब्ध नहीं है,
+         * तो Nominatim का पूरा display_name इस्तेमाल करें।
+         */
+
+        if (
+            !readableAddress &&
             data.display_name
         ) {
 
-            const address =
-                document.getElementById(
-                    "address"
-                );
-
-
-            if (address) {
-
-                address.value =
-                    data.display_name;
-
-            }
+            readableAddress =
+                data.display_name;
 
         }
+
+
+        const address =
+            document.getElementById(
+                "address"
+            );
+
+
+        if (
+            address &&
+            readableAddress
+        ) {
+
+            address.value =
+                readableAddress;
+
+        }
+
+
+        console.log(
+            "AUTO LOCATION ADDRESS:",
+            readableAddress
+        );
+
 
     }
 
@@ -742,8 +1083,6 @@ async function reverseGeocode(
     }
 
 }
-
-
 // ======================================================
 // COMPLAINT FORM
 // ======================================================
@@ -774,7 +1113,6 @@ function setupComplaintForm() {
 
 }
 
-
 // ======================================================
 // SUBMIT COMPLAINT
 // ======================================================
@@ -800,6 +1138,7 @@ async function submitComplaint(event) {
         document.getElementById(
             "category"
         ).value;
+       
 
 
     const description =
@@ -851,20 +1190,7 @@ if (!otpVerified) {
     }
 
 
-    if (
-        !latitude ||
-        !longitude
-    ) {
-
-        alert(
-            "पहले map पर complaint location select करें।"
-        );
-
-        return;
-
-    }
-
-
+   
     const submitButton =
         document.getElementById(
             "submitComplaintBtn"
@@ -875,6 +1201,18 @@ if (!otpVerified) {
         document.getElementById(
             "complaintMessage"
         );
+        console.log("USER PROVIDED LOCATION:", userProvidedLocation);
+        if (!userProvidedLocation) {
+
+    message.innerHTML =
+        `
+        <div class="error">
+            📍 Please provide your location before submitting the complaint.
+        </div>
+        `;
+
+    return;
+}
 
 
     submitButton.disabled = true;
@@ -892,10 +1230,10 @@ if (!otpVerified) {
 const formData = new FormData();
 
 formData.append("name", name);
-formData.append("mobile", mobile);
+formData.append("phone", mobile);
 formData.append("category", category);
 formData.append("description", description);
-formData.append("address", address);
+formData.append("location", address);
 formData.append("latitude", Number(latitude));
 formData.append("longitude", Number(longitude));
 
@@ -937,30 +1275,63 @@ if (photoInput && photoInput.files.length > 0) {
             result.complaint_id ||
             result.data?.id ||
             "Generated";
+             complaintReceiptData = {
+    complaintId: complaintId,
+    name: name,
+    mobile: mobile,
+    category: category,
+    description: description,
+    address: address,
+    latitude: latitude,
+    longitude: longitude,
+    date: new Date().toLocaleString("en-IN"),
+    photoFile:
+        photoInput && photoInput.files.length > 0
+            ? photoInput.files[0]
+            : null
+};
 
 
         message.innerHTML =
-            `
-            <div class="success">
+    `
+    <div class="success">
 
-                <strong>
-                    ✅ शिकायत सफलतापूर्वक दर्ज हो गई!
-                </strong>
+        <strong>
+            ✅ शिकायत सफलतापूर्वक दर्ज हो गई!
+        </strong>
 
-                <br>
+        <br><br>
 
-                Complaint ID:
-                <strong>
-                    ${complaintId}
-                </strong>
+        Complaint ID:
+        <strong>
+            ${complaintId}
+        </strong>
 
-                <br>
+        <br><br>
 
-                इस ID को सुरक्षित रखें।
-                इससे बाद में शिकायत track कर सकते हैं।
+        इस ID को सुरक्षित रखें।
+        इससे बाद में शिकायत track कर सकते हैं।
 
-            </div>
-            `;
+        <br><br>
+
+        <button
+            type="button"
+            onclick="downloadComplaintReceipt()"
+            style="
+                padding: 9px 15px;
+                border: 1px solid #198754;
+                border-radius: 7px;
+                background: #198754;
+                color: white;
+                cursor: pointer;
+                font-weight: 600;
+            "
+        >
+            📄 Download Form
+        </button>
+
+    </div>
+    `;
 
 
         // Reset form
@@ -1021,7 +1392,404 @@ if (photoInput && photoInput.files.length > 0) {
     }
 
 }
+ async function downloadComplaintReceipt() {
 
+    if (!complaintReceiptData) {
+        alert("Complaint details उपलब्ध नहीं हैं।");
+        return;
+    }
+
+    try {
+
+        const jsPDF = window.jspdf.jsPDF;
+
+        const pdf = new jsPDF();
+
+        let y = 20;
+
+       // Header Logo
+const logo = new Image();
+
+logo.src = "/civicconnect-logo.png";
+
+await new Promise((resolve, reject) => {
+
+    logo.onload = resolve;
+    logo.onerror = reject;
+
+});
+
+pdf.addImage(
+    logo,
+    "PNG",
+    82,
+    12,
+    46,
+    24
+);
+
+y = 48;
+
+// CivicConnect title
+pdf.setFontSize(22);
+pdf.setTextColor(25, 135, 84);
+
+pdf.text(
+    "CivicConnect",
+    105,
+    y,
+    {
+        align: "center"
+    }
+);
+
+y += 8;
+
+pdf.setFontSize(12);
+pdf.setTextColor(80, 80, 80);
+
+pdf.text(
+    "Official Complaint Receipt",
+    105,
+    y,
+    {
+        align: "center"
+    }
+);
+
+y += 12;
+
+        pdf.setDrawColor(25, 135, 84);
+        pdf.line(15, y, 195, y);
+
+        y += 12;
+
+        // Complaint ID
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(
+            "Complaint ID:",
+            20,
+            y
+        );
+
+        pdf.setFont("helvetica", "bold");
+
+        pdf.text(
+            String(complaintReceiptData.complaintId),
+            65,
+            y
+        );
+
+        pdf.setFont("helvetica", "normal");
+
+        y += 10;
+
+        // Date
+        pdf.setFontSize(11);
+
+        pdf.text(
+            "Date & Time:",
+            20,
+            y
+        );
+
+        pdf.text(
+            String(complaintReceiptData.date),
+            65,
+            y
+        );
+
+        y += 12;
+
+        // Details
+        pdf.setFont("helvetica", "bold");
+        pdf.text("Complainant Details", 20, y);
+
+        pdf.setFont("helvetica", "normal");
+
+        y += 9;
+
+        pdf.text(
+            "Name:",
+            20,
+            y
+        );
+
+        pdf.text(
+            String(complaintReceiptData.name || ""),
+            65,
+            y
+        );
+
+        y += 8;
+
+        pdf.text(
+            "Mobile:",
+            20,
+            y
+        );
+
+        pdf.text(
+            String(complaintReceiptData.mobile || ""),
+            65,
+            y
+        );
+
+        y += 8;
+
+        pdf.text(
+            "Category:",
+            20,
+            y
+        );
+
+        pdf.text(
+            String(complaintReceiptData.category || ""),
+            65,
+            y
+        );
+
+        y += 12;
+
+        // Location
+        pdf.setFont("helvetica", "bold");
+        pdf.text("Complaint Location", 20, y);
+
+        pdf.setFont("helvetica", "normal");
+
+        y += 9;
+
+        const addressLines =
+            pdf.splitTextToSize(
+                String(
+                    complaintReceiptData.address ||
+                    "Not provided"
+                ),
+                155
+            );
+
+        pdf.text(
+            addressLines,
+            20,
+            y
+        );
+
+        y += addressLines.length * 6 + 8;
+
+        // Coordinates
+        pdf.text(
+            "Latitude:",
+            20,
+            y
+        );
+
+        pdf.text(
+            String(complaintReceiptData.latitude || ""),
+            65,
+            y
+        );
+
+        y += 8;
+
+        pdf.text(
+            "Longitude:",
+            20,
+            y
+        );
+
+        pdf.text(
+            String(complaintReceiptData.longitude || ""),
+            65,
+            y
+        );
+
+        y += 12;
+
+        // Description
+        pdf.setFont("helvetica", "bold");
+        pdf.text("Complaint Description", 20, y);
+
+        pdf.setFont("helvetica", "normal");
+
+        y += 9;
+
+        const descriptionLines =
+            pdf.splitTextToSize(
+                String(
+                    complaintReceiptData.description ||
+                    ""
+                ),
+                170
+            );
+
+        pdf.text(
+            descriptionLines,
+            20,
+            y
+        );
+
+        y += descriptionLines.length * 6 + 15;
+                // Complaint Photo
+        if (complaintReceiptData.photoFile) {
+
+            y += 5;
+
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(12);
+            pdf.setTextColor(0, 0, 0);
+
+            pdf.text(
+                "Complaint Photo",
+                20,
+                y
+            );
+
+            y += 7;
+
+            const photoData =
+                await new Promise((resolve, reject) => {
+
+                    const reader =
+                        new FileReader();
+
+                    reader.onload = () => {
+                        resolve(reader.result);
+                    };
+
+                    reader.onerror = reject;
+
+                    reader.readAsDataURL(
+                        complaintReceiptData.photoFile
+                    );
+                });
+
+            const imageProps =
+                pdf.getImageProperties(
+                    photoData
+                );
+
+            const maxWidth = 170;
+            const maxHeight = 90;
+
+            let imgWidth =
+                maxWidth;
+
+            let imgHeight =
+                (imageProps.height / imageProps.width)
+                * imgWidth;
+
+            if (imgHeight > maxHeight) {
+
+                imgHeight =
+                    maxHeight;
+
+                imgWidth =
+                    (imageProps.width / imageProps.height)
+                    * imgHeight;
+            }
+
+            // New page if necessary
+            if (y + imgHeight > 275) {
+
+                pdf.addPage();
+
+                y = 20;
+            }
+
+            pdf.addImage(
+                photoData,
+                "JPEG",
+                20,
+                y,
+                imgWidth,
+                imgHeight
+            );
+
+            y += imgHeight + 10;
+        }
+
+        // Footer
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(20, y, 190, y);
+
+        y += 8;
+
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 100, 100);
+
+        pdf.text(
+            "Please keep this receipt safe for future tracking and reference.",
+            20,
+            y
+        );
+
+        // Download
+        pdf.save(
+            `CivicConnect-${complaintReceiptData.complaintId}.pdf`
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "PDF generation error:",
+            error
+        );
+
+        alert(
+            "PDF बनाने में समस्या आई। Console में error देखें।"
+        );
+
+    }
+}
+
+function setupPhotoSecurityNotice() {
+    const photoInput =
+        document.getElementById("complaintPhoto");
+
+    const uploadButton =
+        document.getElementById("photoUploadBtn");
+
+    const notice =
+        document.getElementById("photoSecurityNotice");
+
+    const continueButton =
+        document.getElementById("continuePhotoUpload");
+
+    if (
+        !photoInput ||
+        !uploadButton ||
+        !notice ||
+        !continueButton
+    ) {
+        return;
+    }
+
+    uploadButton.addEventListener("click", () => {
+        notice.style.display = "block";
+    });
+
+    continueButton.addEventListener("click", () => {
+        photoInput.click();
+    });
+    photoInput.addEventListener("change", () => {
+
+    if (photoInput.files.length > 0) {
+
+        uploadButton.innerHTML =
+            `📷 ${photoInput.files[0].name}`;
+
+    } else {
+
+        uploadButton.innerHTML =
+            `📷 फोटो अपलोड करें`;
+
+    }
+
+});
+}
 
 // ======================================================
 // TRACKING
@@ -1049,6 +1817,18 @@ function setupTracking() {
                 document.getElementById(
                     "trackingId"
                 ).value.trim();
+                const trackingMobile =
+    document.getElementById(
+        "trackingMobile"
+    ).value.trim();
+    if (!/^[6-9]\d{9}$/.test(trackingMobile)) {
+
+    alert(
+        "कृपया सही 10-digit mobile number enter करें।"
+    );
+
+    return;
+}
 
 
             if (!trackingId) {
@@ -1074,10 +1854,10 @@ function setupTracking() {
 
             try {
 
-                const response =
-                    await fetch(
-                        `/api/complaints/${encodeURIComponent(trackingId)}`
-                    );
+              const response =
+    await fetch(
+        `/api/complaints/${encodeURIComponent(trackingId)}?mobile=${encodeURIComponent(trackingMobile)}`
+    );
 
 
                 const result =
@@ -1690,6 +2470,38 @@ function setupOtpModeControl() {
         document.getElementById("otpModeControl");
 
     if (!control) return;
+    fetch("/api/admin/otp-mode", {
+    headers: {
+        "Authorization":
+            `Bearer ${sessionStorage.getItem("adminToken")}`
+    }
+})
+.then(response => response.json())
+.then(data => {
+
+    if (
+        data.mode === "fixed" ||
+        data.mode === "2factor"
+    ) {
+        const selected =
+            document.querySelector(
+                `input[name="otpMode"][value="${data.mode}"]`
+            );
+
+        if (selected) {
+            selected.checked = true;
+        }
+    }
+
+})
+.catch(error => {
+    console.error(
+        "Could not load OTP mode:",
+        error
+    );
+});
+    if (control.dataset.initialized === "true") return;
+control.dataset.initialized = "true";
 
     control.style.display = "block";
 
@@ -1697,6 +2509,7 @@ function setupOtpModeControl() {
         document.querySelectorAll(
             'input[name="otpMode"]'
         );
+        control.dataset.initialized = "true";
 
     modes.forEach(mode => {
 
@@ -1704,6 +2517,7 @@ function setupOtpModeControl() {
 
             const selectedMode =
                 mode.value;
+                console.log("OTP CHANGE EVENT:", selectedMode);
 
             const password =
                 prompt(
@@ -1711,12 +2525,12 @@ function setupOtpModeControl() {
                 );
 
             if (password === null) {
-                document.querySelector(
-                    'input[name="otpMode"][value="2factor"]'
-                ).checked = true;
+    document.querySelector(
+        `input[name="otpMode"][value="${selectedMode === "fixed" ? "2factor" : "fixed"}"]`
+    ).checked = true;
 
-                return;
-            }
+    return;
+}
 
             try {
 
@@ -1769,9 +2583,9 @@ function setupOtpModeControl() {
                     error.message
                 );
 
-                document.querySelector(
-                    'input[name="otpMode"][value="2factor"]'
-                ).checked = true;
+               document.querySelector(
+    `input[name="otpMode"][value="${selectedMode === "fixed" ? "2factor" : "fixed"}"]`
+).checked = true;
             }
 
         });
