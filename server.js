@@ -116,12 +116,16 @@ const { execFile } = require("child_process");
 function blurFacesWithPython(inputPath, outputPath) {
     return new Promise((resolve, reject) => {
 
-        const pythonPath = path.join(
+       const pythonPath =
+    process.env.PYTHON_PATH ||
+    (process.platform === "win32"
+        ? path.join(
             __dirname,
             "faceblur-env",
             "Scripts",
             "python.exe"
-        );
+        )
+        : "python3");
 
         const scriptPath = path.join(
             __dirname,
