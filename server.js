@@ -1196,20 +1196,6 @@ async function testSupabase() {
     );
   }
 }
-
-// =========================
-// FRONTEND
-// =========================
-
-app.get("*", (req, res) => {
-  res.sendFile(
-    path.join(
-      __dirname,
-      "public",
-      "index.html"
-    )
-  );
-});
 // =========================
 // SEO FILES
 // =========================
@@ -1225,6 +1211,21 @@ app.get("/sitemap.xml", (req, res) => {
     path.join(__dirname, "public", "sitemap.xml")
   );
 });
+
+// =========================
+// FRONTEND
+// =========================
+
+app.get("*", (req, res) => {
+  res.sendFile(
+    path.join(
+      __dirname,
+      "public",
+      "index.html"
+    )
+  );
+});
+
 
 // =========================
 // START SERVER
